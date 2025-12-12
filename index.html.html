@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Spin to Win — Holiday Edition (Final)</title>
+  <style>
+    html,body { height:100%; margin:0; padding:0; overflow:hidden; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; background:linear-gradient(180deg,#462a9a 0%,#7c3aed 55%,#ef9ff5 100%); color:#fff; }
+    .wrap { height:100%; display:flex; align-items:center; justify-content:center; padding:18px; box-sizing:border-box; }
+    .card { width:100%; max-width:1200px; display:flex; align-items:center; justify-content:space-between; gap:22px; box-sizing:border-box; flex-wrap:wrap; }
+
+    /* Promo block (prominent) */
+    .promo-block { width:100%; display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:6px; }
+    .promo-badge { background:linear-gradient(90deg,#f59e0b,#fb923c); padding:12px 14px; border-radius:12px; font-weight:900; color:#08131a; box-shadow:0 12px 36px rgba(0,0,0,.25); }
+    .promo-title { font-size:20px; font-weight:900; text-align:center; line-height:1.05; }
+    .promo-sub { font-size:16px; text-align:center; opacity:0.98; max-width:880px; font-weight:700; }
+    .promo-endorse { background:#fff; color:#0b1220; padding:12px 14px; border-radius:10px; box-shadow:0 12px 36px rgba(2,6,23,.28); text-align:center; font-weight:800; font-size:15px; max-width:880px; }
+
+    /* Wheel area layout */
+    .center-col { flex:1 1 680px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; box-sizing:border-box; position:relative; }
+    .wheel-wrap { display:flex; align-items:center; justify-content:center; position:relative; width:clamp(300px,42vmin,720px); height:clamp(300px,42vmin,720px); }
+    svg.wheel { width:100%; height:100%; display:block; z-index:4; border-radius:18px; pointer-events:none; }
+    .top-pointer { position:absolute; left:50%; top:-32px; transform:translateX(-50%); z-index:12; width:0;height:0; border-left:26px solid transparent; border-right:26px solid transparent; border-top:44px solid #ffb020; filter:drop-shadow(0 8px 18px rgba(0,0,0,.25)); pointer-events:none; }
+    .center-badge { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:10; width:120px; height:120px; pointer-events:none; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#fff; color:#081827; font-weight:900; box-shadow:0 24px 56px rgba(0,0,0,.28); font-size:20px; }
+
+    /* Spins remaining to the right (closer) */
+    .spins-col { display:flex; flex-direction:column; align-items:center; gap:12px; min-width:200px; }
+    .spins-box { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); padding:14px 16px; border-radius:12px; text-align:center; box-shadow:0 12px 36px rgba(0,0,0,.22); min-width:160px; }
+    .spins-box strong { font-size:26px; color:#fff; display:block; }
+
+    /* buttons */
+    .btn { border:0; padding:12px 20px; border-radius:12px; font-weight:800; cursor:pointer; user-select:none; -webkit-user-select:none; }
+    .btn-primary { background:linear-gradient(90deg,#ffb347,#ff7a18); color:#021018; box-shadow:0 18px 42px rgba(0,0,0,.28); font-size:16px; z-index:100; position:relative; }
+    .btn-disabled { opacity:.55; cursor:not-allowed; }
+
+    /* admin floating */
+    .admin-fab { position:fixed; right:18px; bottom:18px; width:56px; height:56px; border-radius:50%; background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,.75)); display:flex; align-items:center; justify-content:center; font-size:20px; z-index:1400; cursor:pointer; box-shadow:0 18px 44px rgba(0,0,0,.35); color:#fff; border:0; }
+
+    /* modals */
+    .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1500; background:rgba(2,6,23,.55); padding:18px; }
+    .modal { width:100%; max-width:560px; background:#fff; color:#0b1220; border-radius:14px; padding:18px; box-shadow:0 24px 80px rgba(2,6,23,.5); }
+    .modal input, .modal select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; margin-bottom:8px; font-size:15px; box-sizing:border-box; }
+
+    /* final modal dimmed (semi-translucent) so fireworks visible) */
+    .final-modal-dim .modal { background: rgba(255,255,255,0.92); backdrop-filter: blur(6px); color:#0b1220; }
+
+    /* final buttons stacked vertically */
+    .final-actions-vertical { display:flex; flex-direction:column; gap:10px; margin-top:12px; align-items:center; justify-content:center; width:100%; }
+
+    @media(max-width:1024px){
+      .card { flex-direction:column; align-items:center; gap:16px; }
+      .spins-col { order:3; }
+      .center-col { order:2; }
+      .promo-sub { font-size:15px; }
+    }
+
+    /* fireworks canvas & confetti */
+    canvas.fireworks { position:fixed; inset:0; width:100%; height:100%; z-index:1450; pointer-events:none; display:none; }
+    .confetti-layer { position:fixed; inset:0; z-index:1420; pointer-events:none; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="application" aria-label="Spin to win wheel">
+      <!-- Center column -->
+      <div class="center-col">
+        <!-- PROMO block moved above the wheel -->
+        <div class="promo-block" id="promoBlock">
+          <div class="promo-badge">📚 Exclusive eBook Offer!</div>
+          <div class="promo-title">"Future of Work - AI Augmented Autonomous Decentralised"</div>
+          <div class="promo-sub">A practical guide for leaders & practitioners — actionable, tested.</div>
+          <div class="promo-endorse" style="margin-top:6px; line-height:1.12; font-size:15px;">
+            Industry &amp; Academia endorsed — Available at prestigious national and academic libraries worldwide including,
+            <div style="font-weight:900; margin-top:6px;">Harvard Business School, National University of Singapore and the National Library of Singapore</div>
+          </div>
+        </div>
+
+        <!-- Wheel -->
+        <div class="wheel-wrap" id="wheelWrap">
+          <div class="top-pointer" id="topPointer" aria-hidden="true"></div>
+          <svg viewBox="0 0 200 200" class="wheel" id="wheelSvg" style="transform:rotate(0deg);transition:transform 4s cubic-bezier(.22,.9,.3,1);"></svg>
+          <div class="center-badge" id="centerBadge">SPIN</div>
+        </div>
+
+        <!-- Spin button (below wheel) -->
+        <div style="display:flex;align-items:center;justify-content:center;margin-top:6px;width:100%;">
+          <button id="spinBtn" class="btn btn-primary" aria-label="Spin Now">SPIN NOW!</button>
+        </div>
+
+        <div id="statusLine" style="height:18px;margin-top:6px;min-width:220px;text-align:center;color:#fff;"></div>
+      </div>
+
+      <!-- Right column: Spins box (closer to wheel on right) -->
+      <div class="spins-col" style="align-items:center;">
+        <div class="spins-box" aria-live="polite">
+          <div style="opacity:.95;font-weight:800">🎯 Spins Remaining</div>
+          <div style="margin-top:8px"><strong id="spinsRemaining">3</strong></div>
+          <div id="totalLineSmall" style="margin-top:10px;color:#bbf7d0;display:none;font-weight:900">Total Discount: <span id="totalSmall">0%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- admin floating -->
+  <button class="admin-fab" id="adminFab" title="Admin access">🔒</button>
+
+  <!-- confetti layer & fireworks canvas -->
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+  <canvas id="fireCanvas" class="fireworks" aria-hidden="true"></canvas>
+
+  <!-- Admin modal -->
+  <div class="modal-overlay" id="adminModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+      <h3 id="adminTitle" style="margin:0 0 8px 0">Admin Access</h3>
+      <p style="color:#6b7280;margin:0 0 12px 0">Enter admin password to reset the game</p>
+      <input id="adminPwd" type="password" placeholder="" autocomplete="off" />
+      <div style="min-height:18px;color:#dc2626" id="adminErr"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="adminReset" class="btn" style="background:#0b1220;color:#fff;font-weight:800">Reset Game</button>
+        <button id="adminClose" class="btn" style="background:#f3f4f6">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration modal -->
+  <div class="modal-overlay" id="regModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin:0 0 6px 0">Register to continue</h3>
+      <p style="margin:0 0 12px 0;color:#6b7280">We'll email your discount code after all spins</p>
+      <input id="regName" placeholder="Full name *" />
+      <input id="regEmail" placeholder="Email address *" />
+      <select id="regCountry">
+        <!-- Full world countries list -->
+        <option value="">Select Country *</option>
+        <option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Andorra</option><option>Angola</option><option>Antigua and Barbuda</option><option>Argentina</option><option>Armenia</option><option>Australia</option><option>Austria</option><option>Azerbaijan</option>
+        <option>Bahamas</option><option>Bahrain</option><option>Bangladesh</option><option>Barbados</option><option>Belarus</option><option>Belgium</option><option>Belize</option><option>Benin</option><option>Bhutan</option><option>Bolivia</option><option>Bosnia and Herzegovina</option><option>Botswana</option><option>Brazil</option><option>Brunei</option><option>Bulgaria</option><option>Burkina Faso</option><option>Burundi</option>
+        <option>Cabo Verde</option><option>Cambodia</option><option>Cameroon</option><option>Canada</option><option>Central African Republic</option><option>Chad</option><option>Chile</option><option>China</option><option>Colombia</option><option>Comoros</option><option>Costa Rica</option><option>Côte d'Ivoire</option><option>Croatia</option><option>Cuba</option><option>Cyprus</option><option>Czechia</option>
+        <option>Democratic Republic of the Congo</option><option>Denmark</option><option>Djibouti</option><option>Dominica</option><option>Dominican Republic</option><option>Ecuador</option><option>Egypt</option><option>El Salvador</option><option>Equatorial Guinea</option><option>Eritrea</option><option>Estonia</option><option>Eswatini</option><option>Ethiopia</option>
+        <option>Fiji</option><option>Finland</option><option>France</option>
+        <option>Gabon</option><option>Gambia</option><option>Georgia</option><option>Germany</option><option>Ghana</option><option>Greece</option><option>Grenada</option><option>Guatemala</option><option>Guinea</option><option>Guinea-Bissau</option><option>Guyana</option>
+        <option>Haiti</option><option>Honduras</option><option>Hungary</option>
+        <option>Iceland</option><option>India</option><option>Indonesia</option><option>Iran</option><option>Iraq</option><option>Ireland</option><option>Israel</option><option>Italy</option>
+        <option>Jamaica</option><option>Japan</option><option>Jordan</option>
+        <option>Kazakhstan</option><option>Kenya</option><option>Kiribati</option><option>Kuwait</option><option>Kyrgyzstan</option>
+        <option>Laos</option><option>Latvia</option><option>Lebanon</option><option>Lesotho</option><option>Liberia</option><option>Libya</option><option>Liechtenstein</option><option>Lithuania</option><option>Luxembourg</option>
+        <option>Madagascar</option><option>Malawi</option><option>Malaysia</option><option>Maldives</option><option>Mali</option><option>Malta</option><option>Marshall Islands</option><option>Mauritania</option><option>Mauritius</option><option>Mexico</option><option>Micronesia</option><option>Moldova</option><option>Monaco</option><option>Mongolia</option><option>Montenegro</option><option>Morocco</option><option>Mozambique</option>
+        <option>Myanmar</option>
+        <option>Namibia</option><option>Nauru</option><option>Nepal</option><option>Netherlands</option><option>New Zealand</option><option>Nicaragua</option><option>Niger</option><option>Nigeria</option><option>North Korea</option><option>North Macedonia</option><option>Norway</option>
+        <option>Oman</option>
+        <option>Pakistan</option><option>Palau</option><option>Panama</option><option>Papua New Guinea</option><option>Paraguay</option><option>Peru</option><option>Philippines</option><option>Poland</option><option>Portugal</option>
+        <option>Qatar</option>
+        <option>Republic of the Congo</option><option>Romania</option><option>Russia</option><option>Rwanda</option>
+        <option>Saint Kitts and Nevis</option><option>Saint Lucia</option><option>Saint Vincent and the Grenadines</option><option>Samoa</option><option>San Marino</option><option>Sao Tome and Principe</option><option>Saudi Arabia</option><option>Senegal</option><option>Serbia</option><option>Seychelles</option><option>Sierra Leone</option><option>Singapore</option><option>Slovakia</option><option>Slovenia</option><option>Solomon Islands</option><option>Somalia</option><option>South Africa</option><option>South Korea</option><option>South Sudan</option><option>Spain</option><option>Sri Lanka</option><option>Sudan</option><option>Suriname</option><option>Sweden</option><option>Switzerland</option><option>Syria</option>
+        <option>Taiwan</option><option>Tajikistan</option><option>Tanzania</option><option>Thailand</option><option>Timor-Leste</option><option>Togo</option><option>Tonga</option><option>Trinidad and Tobago</option><option>Tunisia</option><option>Turkey</option><option>Turkmenistan</option><option>Tuvalu</option>
+        <option>Uganda</option><option>Ukraine</option><option>United Arab Emirates</option><option>United Kingdom</option><option>United States</option><option>Uruguay</option><option>Uzbekistan</option>
+        <option>Vanuatu</option><option>Vatican City</option><option>Venezuela</option><option>Vietnam</option>
+        <option>Yemen</option>
+        <option>Zambia</option><option>Zimbabwe</option>
+      </select>
+      <div style="min-height:18px;color:#ef4444" id="regErr"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="regContinue" class="btn" style="background:#7c3aed;color:#fff;font-weight:800">Continue</button>
+        <button id="regCancel" class="btn" style="background:#f3f4f6">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Final modal (dimmed box so fireworks visible) -->
+  <div class="modal-overlay final-modal-dim" id="finalModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" style="text-align:center; width:100%; max-width:520px; background: rgba(255,255,255,0.92);">
+      <div style="display:flex;justify-content:center;margin-bottom:12px">
+        <div style="width:160px;height:110px;position:relative">
+          <div id="boxLid" style="position:absolute;left:0;top:-18px;width:100%;height:34px;background:linear-gradient(180deg,#ffd86b,#ffb347);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.22)"></div>
+          <div style="position:absolute;left:0;bottom:0;width:100%;height:100px;background:linear-gradient(180deg,#fff1c6,#ffd1a6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:34px">✨</div>
+        </div>
+      </div>
+      <h2 id="finalTitle" style="margin:0 0 6px 0;font-size:22px;font-weight:900;color:#0b1220">Congratulations!</h2>
+      <p id="finalSpins" style="margin:0 0 6px 0;color:#374151"></p>
+      <p id="finalTotal" style="margin:0 0 12px 0;font-weight:900;color:#7c3aed;font-size:20px"></p>
+
+      <div style="padding-bottom:12px; display:flex; flex-direction:column; gap:10px; align-items:center; justify-content:center; width:100%;">
+        <div style="font-weight:900;font-size:16px;color:#0b1220;margin-bottom:6px">Follow Sreejith — book promos & AI updates</div>
+        <div class="final-actions-vertical" style="width:100%; padding:0 20px;">
+          <a id="linkedinBtn" href="https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7390583083818901504" target="_blank" rel="noopener" class="btn" style="background:#0A66C2;color:#fff;padding:12px 14px;border-radius:10px;font-weight:800;text-decoration:none; width:100%;">Subscribe on LinkedIn ↗</a>
+          <button id="purchaseBtn" class="btn" style="background:#059669;color:#fff;padding:14px 16px;border-radius:12px;font-weight:900; font-size:18px; width:100%;">🛒 Purchase Now with 50% OFF</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center">
+        <button id="finalClose" class="btn" style="background:#f3f4f6">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ====== CONFIG ======
+  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztgV-OG543I6_YJqAEFOcXt6X5RYPdgLAhQacASlbj8xbp3FY5auJWbjXbqZagQ2z7/exec';
+  const QUEUE_KEY = 'spin_queue_v_final';
+  const ADMIN_PASSWORD = '2239';
+
+  const segments = [
+    { discount:10, color:'#FF6B6B', label:'10%' },
+    { discount:15, color:'#4ECDC4', label:'15%' },
+    { discount:20, color:'#FFE66D', label:'20%' },
+    { discount:25, color:'#95E1D3', label:'25%' }
+  ];
+  const validCombos = [[10,15,25],[10,20,20],[15,15,20],[10,25,15],[20,15,15],[25,15,10],[20,20,10],[25,10,15],[15,20,15],[20,10,20]];
+  const segmentAngle = 360 / segments.length;
+
+  // ====== DOM ======
+  const wheelSvg = document.getElementById('wheelSvg');
+  const centerBadge = document.getElementById('centerBadge');
+  const spinBtn = document.getElementById('spinBtn');
+  const spinsRemainingEl = document.getElementById('spinsRemaining');
+  const totalLineSmall = document.getElementById('totalLineSmall');
+  const totalSmall = document.getElementById('totalSmall');
+  const statusLine = document.getElementById('statusLine');
+
+  const adminFab = document.getElementById('adminFab');
+  const adminModal = document.getElementById('adminModal');
+  const adminPwd = document.getElementById('adminPwd');
+  const adminReset = document.getElementById('adminReset');
+  const adminClose = document.getElementById('adminClose');
+  const adminErr = document.getElementById('adminErr');
+
+  const regModal = document.getElementById('regModal');
+  const regName = document.getElementById('regName');
+  const regEmail = document.getElementById('regEmail');
+  const regCountry = document.getElementById('regCountry');
+  const regContinue = document.getElementById('regContinue');
+  const regCancel = document.getElementById('regCancel');
+  const regErr = document.getElementById('regErr');
+
+  const finalModal = document.getElementById('finalModal');
+  const finalTitle = document.getElementById('finalTitle');
+  const finalSpins = document.getElementById('finalSpins');
+  const finalTotal = document.getElementById('finalTotal');
+  const purchaseBtn = document.getElementById('purchaseBtn');
+  const finalClose = document.getElementById('finalClose');
+
+  const confettiLayer = document.getElementById('confettiLayer');
+  const fireCanvas = document.getElementById('fireCanvas');
+
+  // ====== state ======
+  let selectedCombo = null;
+  let isSpinning = false;
+
+  let state = {
+    rotation: 0,
+    spinsLeft: 3,
+    hasRegistered: false,
+    allDiscounts: [],
+    totalDiscount: 0,
+    formData: { name:'', email:'', country:''},
+    finalAcknowledged: false
+  };
+
+  // ====== build wheel ======
+  function buildWheel(){
+    wheelSvg.innerHTML = '';
+    segments.forEach((s, index) => {
+      const startAngle = (index*segmentAngle)*(Math.PI/180);
+      const endAngle = ((index+1)*segmentAngle)*(Math.PI/180);
+      const x1 = 100 + 95 * Math.cos(startAngle);
+      const y1 = 100 + 95 * Math.sin(startAngle);
+      const x2 = 100 + 95 * Math.cos(endAngle);
+      const y2 = 100 + 95 * Math.sin(endAngle);
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M 100 100 L ${x1} ${y1} A 95 95 0 0 1 ${x2} ${y2} Z`);
+      path.setAttribute('fill', s.color);
+      path.setAttribute('stroke','white');
+      path.setAttribute('stroke-width','3');
+      wheelSvg.appendChild(path);
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      const midAngle = ((index+0.5)*segmentAngle)*(Math.PI/180);
+      const textX = 100 + 65 * Math.cos(midAngle);
+      const textY = 100 + 65 * Math.sin(midAngle);
+      text.setAttribute('x', textX);
+      text.setAttribute('y', textY);
+      text.setAttribute('fill','white');
+      text.setAttribute('font-size','22');
+      text.setAttribute('font-weight','bold');
+      text.setAttribute('text-anchor','middle');
+      text.setAttribute('dominant-baseline','middle');
+      text.textContent = s.label;
+      wheelSvg.appendChild(text);
+    });
+  }
+
+  // ====== storage ======
+  function loadState(){
+    try {
+      const raw = localStorage.getItem('user-game-state');
+      if (raw) {
+        const d = JSON.parse(raw);
+        state.rotation = d.rotation || 0;
+        state.spinsLeft = (typeof d.spinsLeft === 'number') ? d.spinsLeft : 3;
+        state.hasRegistered = d.hasRegistered || false;
+        state.allDiscounts = d.allDiscounts || [];
+        state.totalDiscount = d.totalDiscount || 0;
+        state.formData = d.formData || { name:'', email:'', country:''};
+        state.finalAcknowledged = d.finalAcknowledged || false;
+      }
+    } catch(e){}
+    if (!selectedCombo) selectedCombo = validCombos[Math.floor(Math.random()*validCombos.length)];
+    applyUI();
+  }
+  function saveState(){ try{ localStorage.setItem('user-game-state', JSON.stringify(state)); }catch(e){} }
+
+  // ====== UI apply ======
+  function applyUI(){
+    wheelSvg.style.transform = `rotate(${state.rotation}deg)`;
+    centerBadge.textContent = state.allDiscounts.length ? (state.allDiscounts[state.allDiscounts.length-1] + '%') : 'SPIN';
+    spinsRemainingEl.textContent = state.spinsLeft;
+    if (state.totalDiscount > 0){ totalLineSmall.style.display = 'block'; totalSmall.textContent = state.totalDiscount + '%'; } else { totalLineSmall.style.display = 'none'; }
+    if (state.finalAcknowledged) disableSpin();
+  }
+
+  // ====== sending (robust) ======
+  async function sendViaForm(payload){
+    try{
+      const iframeName = 'gframe_' + Date.now();
+      const iframe = document.createElement('iframe'); iframe.name=iframeName; iframe.style.display='none'; document.body.appendChild(iframe);
+      const form = document.createElement('form'); form.action = GOOGLE_SCRIPT_URL; form.method='GET'; form.target = iframeName;
+      Object.keys(payload).forEach(k => { const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=payload[k]; form.appendChild(i); });
+      document.body.appendChild(form); form.submit();
+      setTimeout(()=>{ try{ document.body.removeChild(form); document.body.removeChild(iframe); }catch(e){} },2200);
+      return true;
+    }catch(e){ return false; }
+  }
+  async function sendPayload(payload, fromRetry=false){
+    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_URL_HERE')){ setStatus('⚠️ Google Script not set'); return false; }
+    setStatus('📤 Sending...');
+    try{
+      const ok = await sendViaForm(payload);
+      if (ok){ setStatus('✅ Sent'); setTimeout(()=>setStatus(''),1400); return true; }
+    }catch(e){}
+    try {
+      const qs = new URLSearchParams(payload).toString();
+      const url = `${GOOGLE_SCRIPT_URL}?${qs}&_=${Date.now()}`;
+      (new Image()).src = url;
+      setStatus('✅ Sent (beacon)'); setTimeout(()=>setStatus(''),1400); return true;
+    }catch(e){}
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      setStatus('✅ Sent (fetch)'); setTimeout(()=>setStatus(''),1400); return true;
+    }catch(e){}
+    queuePayload(payload);
+    setStatus('❌ Queued (will retry)');
+    return false;
+  }
+  function queuePayload(payload){
+    try {
+      const raw = localStorage.getItem(QUEUE_KEY);
+      const q = raw ? JSON.parse(raw) : [];
+      q.push({payload, ts: Date.now()});
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+    }catch(e){}
+  }
+  setInterval(async ()=>{
+    try {
+      const raw = localStorage.getItem(QUEUE_KEY);
+      const q = raw ? JSON.parse(raw) : [];
+      if (!q.length) return;
+      const item = q.shift();
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+      const ok = await sendPayload(item.payload, true);
+      if (!ok){ const raw2 = localStorage.getItem(QUEUE_KEY); const q2 = raw2 ? JSON.parse(raw2) : []; q2.push(item); localStorage.setItem(QUEUE_KEY, JSON.stringify(q2)); }
+      else { setStatus('✅ Previously queued delivered'); setTimeout(()=>setStatus(''),1700); }
+    }catch(e){}
+  },12000);
+
+  function sendToGoogle(discounts,total,status){
+    const timestamp = new Date().toLocaleString('en-US',{timeZone:'Asia/Singapore', hour12:false});
+    const payload = { timestamp, name: state.formData.name || '', email: state.formData.email || '', country: state.formData.country || '', spin1: discounts[0]||'', spin2: discounts[1]||'', spin3: discounts[2]||'', totalDiscount: total||'', status: status||'' };
+    return sendPayload(payload);
+  }
+
+  function setStatus(t){ statusLine.textContent = t || ''; }
+
+  // ====== confetti & fireworks (start on page load, stop at end of spin) ======
+  function throwConfetti(){
+    const colors = ['#F87171','#34D399','#60A5FA','#FDE68A','#FB7185','#A78BFA','#FDBA74'];
+    for (let i=0;i<20;i++){
+      const el = document.createElement('div');
+      const size = 6 + Math.random()*12;
+      el.style.position='absolute'; el.style.left = (Math.random()*100)+'%'; el.style.top = '-6%';
+      el.style.width = size+'px'; el.style.height = (size+6)+'px'; el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.transform = `rotate(${Math.random()*360}deg)`; el.style.borderRadius='3px'; el.style.boxShadow='0 6px 14px rgba(0,0,0,.2)';
+      el.style.transition = `transform 2200ms linear, opacity 2200ms linear`;
+      confettiLayer.appendChild(el);
+      setTimeout(()=>{ el.style.transform = `translateY(${window.innerHeight + 200}px) rotate(${Math.random()*720}deg)`; el.style.opacity='0'; },30);
+      setTimeout(()=>{ try{ confettiLayer.removeChild(el); }catch(e){} },2400);
+    }
+  }
+
+  let fwRAF = null;
+  let fireworksParticles = [];
+  let fwCtx = null;
+  let fwRunning = false;
+  let fwInterval = null;
+
+  function startFireworksPermanent(){
+    if (fwRunning) return;
+    fwRunning = true;
+    fireCanvas.style.display = 'block';
+    fwCtx = fireCanvas.getContext('2d');
+    function resize(){ fireCanvas.width = window.innerWidth; fireCanvas.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
+    function spawnBurst(){
+      const density = Math.max(30, Math.floor(window.innerWidth/22));
+      const count = Math.min(250, density);
+      const x = 80 + Math.random()*(window.innerWidth-160);
+      const y = 80 + Math.random()*240;
+      const colors = ['#FF3C78','#FFB86B','#7BE281','#6EA8FE','#B388FF','#FFC2E2','#FFD86B'];
+      for (let i=0;i<count;i++){
+        fireworksParticles.push({
+          x, y,
+          vx: (Math.random()*10-5) * (window.innerWidth/1200 + 0.6),
+          vy: (Math.random()*-10 - 2) * (window.innerWidth/1200 + 0.6),
+          life: 80 + Math.random()*120,
+          age: 0,
+          color: colors[Math.floor(Math.random()*colors.length)],
+          size: 2 + Math.random()*6 * (window.innerWidth/1200 + 0.8)
+        });
+      }
+    }
+    function loop(){
+      fwCtx.clearRect(0,0,fireCanvas.width, fireCanvas.height);
+      for (let i=fireworksParticles.length-1;i>=0;i--){
+        const p = fireworksParticles[i];
+        p.age++; p.vy += 0.18; p.x += p.vx; p.y += p.vy;
+        const alpha = Math.max(0, 1 - p.age/p.life);
+        fwCtx.globalAlpha = alpha;
+        fwCtx.fillStyle = p.color;
+        fwCtx.beginPath(); fwCtx.arc(p.x, p.y, p.size, 0, Math.PI*2); fwCtx.fill();
+        if (p.age >= p.life) fireworksParticles.splice(i,1);
+      }
+      fwRAF = requestAnimationFrame(loop);
+    }
+    loop();
+    spawnBurst();
+    fwInterval = setInterval(spawnBurst, 700);
+    fireCanvas._fw = { stop: ()=>{ clearInterval(fwInterval); cancelAnimationFrame(fwRAF); window.removeEventListener('resize', resize); fwCtx.clearRect(0,0,fireCanvas.width, fireCanvas.height); fwRunning=false; fireCanvas.style.display='none'; } };
+  }
+
+  function stopFireworks(){
+    try {
+      if (fireCanvas._fw && typeof fireCanvas._fw.stop === 'function') { fireCanvas._fw.stop(); }
+      // clear any remaining confetti quickly
+      try { confettiLayer.innerHTML = ''; } catch(e){}
+    } catch(e){}
+  }
+
+  // ====== spin logic ======
+  function normalize(v){ return ((v%360)+360)%360; }
+
+  async function doSpin(){
+    if (state.finalAcknowledged) return;
+    if (isSpinning) return;
+    if (state.spinsLeft === 2 && !state.hasRegistered){ openRegistration(); return; }
+    isSpinning = true;
+    throwConfetti();
+    const spinIndex = 3 - state.spinsLeft;
+    const won = (selectedCombo) ? selectedCombo[spinIndex] : segments[Math.floor(Math.random()*segments.length)].discount;
+    const segIndex = segments.findIndex(s => s.discount === won);
+    const segmentCenter = (segIndex * segmentAngle) + (segmentAngle / 2);
+    const currentNorm = normalize(state.rotation);
+    const rotationNeeded = ((270 - currentNorm - segmentCenter) % 360 + 360) % 360;
+    const full = 6 * 360;
+    const newRotation = state.rotation + full + rotationNeeded;
+    wheelSvg.style.transition = 'transform 4.2s cubic-bezier(.22,.9,.3,1)';
+    wheelSvg.style.transform = `rotate(${newRotation}deg)`;
+    spinBtn.disabled = true; spinBtn.classList.add('btn-disabled');
+    setTimeout(async ()=>{
+      state.rotation = newRotation;
+      state.allDiscounts.push(won);
+      state.totalDiscount = state.allDiscounts.reduce((a,b)=>a+b,0);
+      state.spinsLeft -= 1;
+      centerBadge.textContent = won + '%';
+      spinsRemainingEl.textContent = state.spinsLeft;
+      if (state.totalDiscount>0){ totalLineSmall.style.display = 'block'; totalSmall.textContent = state.totalDiscount + '%'; }
+      saveState();
+      isSpinning = false;
+      if (!state.finalAcknowledged && state.spinsLeft > 0){ spinBtn.disabled = false; spinBtn.classList.remove('btn-disabled'); }
+      if (state.spinsLeft === 1 && state.hasRegistered){ await sendToGoogle(state.allDiscounts, state.totalDiscount, 'After Spin 2'); }
+      if (state.spinsLeft === 0){
+        await sendToGoogle(state.allDiscounts, state.totalDiscount, 'Completed');
+        // keep fireworks running a little longer, then stop
+        setTimeout(()=>{ stopFireworks(); }, 2200);
+        openFinal();
+      }
+    },4400);
+  }
+
+  // ====== registration modal ======
+  function openRegistration(){ regModal.style.display='flex'; regName.value = state.formData.name || ''; regEmail.value = state.formData.email || ''; regCountry.value = state.formData.country || ''; regErr.textContent=''; setTimeout(()=>regName.focus(),120); }
+  regCancel.addEventListener('click', ()=>{ regModal.style.display='none'; regErr.textContent=''; });
+  regContinue.addEventListener('click', async ()=>{
+    const name = regName.value.trim(), email = regEmail.value.trim(), country = regCountry.value;
+    if (!name || !email || !country){ regErr.textContent = 'Please complete all fields'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ regErr.textContent = 'Enter a valid email'; return; }
+    state.hasRegistered = true; state.formData = { name, email, country }; saveState();
+    regModal.style.display='none'; regErr.textContent=''; setStatus('✅ Registered');
+    await sendToGoogle(state.allDiscounts, state.totalDiscount, 'Registered');
+    setTimeout(()=>setStatus(''),1500);
+  });
+
+  // ====== admin ======
+  adminFab.addEventListener('click', ()=>{ adminModal.style.display='flex'; adminPwd.value=''; adminErr.textContent=''; setTimeout(()=>adminPwd.focus(),120); });
+  adminClose.addEventListener('click', ()=>{ adminModal.style.display='none'; adminPwd.value=''; adminErr.textContent=''; });
+  adminReset.addEventListener('click', ()=>{
+    const v = adminPwd.value.trim();
+    if (v === ADMIN_PASSWORD){
+      localStorage.removeItem('user-game-state'); localStorage.removeItem(QUEUE_KEY);
+      selectedCombo = validCombos[Math.floor(Math.random()*validCombos.length)];
+      state = { rotation:0, spinsLeft:3, hasRegistered:false, allDiscounts:[], totalDiscount:0, formData:{name:'',email:'',country:''}, finalAcknowledged:false };
+      applyUI(); adminModal.style.display='none'; adminPwd.value=''; adminErr.textContent=''; confettiLayer.innerHTML=''; setStatus('✅ Game reset');
+      spinBtn.disabled = false; spinBtn.classList.remove('btn-disabled'); spinBtn.textContent='SPIN NOW!';
+      // restart fireworks since page still active
+      startFireworksPermanent();
+      setTimeout(()=>setStatus(''),1400);
+    } else { adminErr.textContent = 'Invalid password'; adminPwd.focus(); }
+  });
+
+  // ====== final modal ======
+  function openFinal(){
+    finalTitle.textContent = `Congratulations, ${state.formData.name || 'Friend'}!`;
+    finalSpins.textContent = `Your spins: ${state.allDiscounts.join(' + ')}`;
+    finalTotal.textContent = `${state.totalDiscount}% OFF`;
+    finalModal.style.display='flex';
+    spinBtn.disabled = true; spinBtn.classList.add('btn-disabled'); spinBtn.textContent='NO SPINS LEFT';
+  }
+  finalClose.addEventListener('click', ()=>{
+    finalModal.style.display='none';
+    state.finalAcknowledged = true; saveState();
+    setStatus('🎉 Enjoy the holiday celebrations!');
+  });
+
+  purchaseBtn.addEventListener('click', ()=> window.open('https://futureofworksreejith.gumroad.com/l/qkiod','_blank'));
+
+  // ====== init & bindings ======
+  function init(){
+    buildWheel();
+    loadState();
+    if (state.finalAcknowledged) disableSpin(); else enableSpin();
+    if (state.rotation) wheelSvg.style.transform = `rotate(${state.rotation}deg)`;
+    // ensure spin button receives touch events & click (mobile)
+    spinBtn.addEventListener('click', ()=>{ if (!spinBtn.disabled) doSpin(); });
+    spinBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); if (!spinBtn.disabled) doSpin(); }, {passive:false});
+    // accessibility: spacebar
+    window.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ e.preventDefault(); if (!spinBtn.disabled) doSpin(); } });
+    // start fireworks immediately as user opens (will stop after final spin completes)
+    startFireworksPermanent();
+  }
+  init();
+
+  // ====== helper enable/disable ======
+  function disableSpin(){ spinBtn.disabled = true; spinBtn.classList.add('btn-disabled'); spinBtn.textContent='NO SPINS LEFT'; }
+  function enableSpin(){ spinBtn.disabled = false; spinBtn.classList.remove('btn-disabled'); spinBtn.textContent='SPIN NOW!'; }
+
+  window.__SpinWheelFinal = { state, doSpin, sendToGoogle };
+
+})();
+</script>
+</body>
+</html>
